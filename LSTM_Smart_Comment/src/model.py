@@ -58,10 +58,19 @@ class ReviewAnalyzeModel(nn.Module):
         # 3. 提取每个样本"最后一个真实 token"对应的隐藏状态
         #    因为句子可能被 <pad> 填充，不能直接取最后一列，要根据真实长度定位
         # batch_indexes：每个样本对应的行索引 [0, 1, 2, ..., batch_size-1]
+        # output.shape[0] = output.shape[0]
+        # torch.arange(start, end, step) 在区间[start,end)中创建步长为step的张量
+        # batch_indexes.shape: [batch_size]
         batch_indexes = torch.arange(0, output.shape[0])
         # lengths：每个样本真实（非 pad）的 token 数量
+        # x.shape: [batch_size, seq_len]
+        # (x != self.embedding.padding_idx)生成一个二维的bool张量，shape: [batch_size, seq_len]
+        # sum(dim=1)：按行求和，得到每个样本真实（非 pad）的 token 数量
+        # lengths.shape: [batch_size]
         lengths = (x != self.embedding.padding_idx).sum(dim=1)
         # 用行索引 + 真实长度-1 定位最后一个真实 token 的隐藏状态
+        # output.shape: [batch_size, seq_len, hidden_size]
+        # 找到每个样本最后一个真实 token 的隐藏状态
         last_hidden = output[batch_indexes, lengths - 1]
         # last_hidden.shape: [batch_size, hidden_size]
 

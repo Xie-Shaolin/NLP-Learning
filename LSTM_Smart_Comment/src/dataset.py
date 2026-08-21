@@ -27,6 +27,21 @@ class ReviewAnalyzeDataset(Dataset):
         :param path: jsonl 数据文件路径
         """
         # 读取 jsonl 文件（orient='records' 表示每行是一个记录），再转成字典列表，方便按索引取值
+        # 第 1 步：读取 jsonl 文件 -> DataFrame（行=样本，列=label/review）
+        '''
+            label                  review
+        0     1              [12, 5, 8, 0, 0, 0]
+        1     0              [3, 7, 1, 4, 2, 6]
+        2     1              [9, 2, 5, 1, 0, 0]  
+        '''
+        # 第 2 步：DataFrame -> 字典列表，为了在 __getitem__ 里按索引取值方便
+        '''
+        [
+            {'label': 1, 'review': [12, 5, 8, 0, 0, 0]},
+            {'label': 0, 'review': [3, 7, 1, 4, 2, 6]},
+            {'label': 1, 'review': [9, 2, 5, 1, 0, 0]}
+        ]
+        '''
         self.data = pd.read_json(path, lines=True, orient='records').to_dict(orient='records')
 
     def __len__(self):
@@ -43,8 +58,8 @@ class ReviewAnalyzeDataset(Dataset):
 
         :param index: 样本索引
         :return: (input_tensor, target_tensor)
-                 input_tensor 是评论的索引序列，shape: [seq_len]
-                 target_tensor 是情感标签，shape: [1]（标量）
+                input_tensor 是评论的索引序列，shape: [seq_len]
+                target_tensor 是情感标签，shape: [1]（标量）
         """
         # 评论的索引序列 -> 转成 long 类型张量（索引必须是整数）
         input_tensor = torch.tensor(self.data[index]['review'], dtype=torch.long)
