@@ -65,12 +65,26 @@ def predict_batch(model, inputs, en_tokenizer):
             # 更新输入：把本步预测的词作为下一步的输入（自回归的核心）
             decoder_input = next_token_indexes
 
+            '''
+            |= 是 按位或赋值运算符 ，等价于 a = a | b
+                在这里， a 和 b 都是 布尔张量 ，所以对布尔值来说，按位或就是 逻辑或 。
+                它的核心语义是： 一旦某个位置被置为 True ，就永远保持 True ，不会被后续的 False 覆盖
+                即"一旦结束就永远结束"。
+            is_finished = is_finished | (next_token_indexes.squeeze(1) == en_tokenizer.eos_token_index)
+                        = [False, True, False] | [True,  False,  False] = [True, True, False]
+            '''
             # 判断是否应该结束
             # squeeze(1) 去掉第 1 维（尺寸为 1），[batch_size, 1] -> [batch_size]；
             # 与 eos 索引逐元素比较，得到布尔张量；
             # |= 把"本步已结束"的样本标记进 is_finished。
             is_finished |= (next_token_indexes.squeeze(1) == en_tokenizer.eos_token_index)
             # .all()：只有当整个 batch 都生成了 eos 才提前退出循环
+            '''
+                is_finished.all() 是 PyTorch Tensor 的 归约（reduction）方法 ，属于"逻辑归约"这一族。
+                它把整个张量里所有元素做 逻辑与（AND） ，返回一个 标量张量 。
+                    .all()：逻辑与（AND）, 只有当所有元素都为 True 才返回 True，否则返回 False。
+                    .any()：逻辑或（OR）, 只要有一个元素为 True 就返回 True，否则返回 False。
+            '''
             if is_finished.all():
                 break
 
@@ -87,10 +101,12 @@ def predict_batch(model, inputs, en_tokenizer):
         # 去掉eos之后的token id
         # 每个样本在 eos 处截断（eos 本身也不保留）
         for index, sentence in enumerate(generated_list):
+            # 如果 en_tokenizer.eos_token_index 在 sentence 中
             if en_tokenizer.eos_token_index in sentence:
                 eos_pos = sentence.index(en_tokenizer.eos_token_index)  # 找到 eos 首次出现的位置
                 generated_list[index] = sentence[:eos_pos]              # 切片截断，只留 eos 之前的词
         # generated_list：[[*,*,*,*,*],[*,*,*],[*,*]]
+        #  # generated_list = [I, love, you]   # 没有 sos，也没有 eos
         return generated_list
 
 
@@ -131,7 +147,7 @@ def run_predict():
 
     # 3. 模型
     model = TranslationModel(zh_tokenizer.vocab_size, en_tokenizer.vocab_size, zh_tokenizer.pad_token_index,
-                             en_tokenizer.pad_token_index).to(device)
+                            en_tokenizer.pad_token_index).to(device)
     # load_state_dict：把训练保存的 best.pt 权重加载进模型（键一一对应）
     model.load_state_dict(torch.load(config.MODELS_DIR / 'best.pt'))
     print("模型加载成功")

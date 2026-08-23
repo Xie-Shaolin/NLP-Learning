@@ -25,14 +25,14 @@ class TranslationEncoder(nn.Module):
         # nn.Embedding(num_embeddings, embedding_dim)：词嵌入查找表，
         # 输入整数索引 -> 输出对应词向量。padding_idx 指定的索引，其梯度恒为 0，padding 位不参与学习。
         self.embedding = nn.Embedding(num_embeddings=vocab_size,
-                                      embedding_dim=config.EMBEDDING_DIM,
-                                      padding_idx=padding_index)
+                                    embedding_dim=config.EMBEDDING_DIM,
+                                    padding_idx=padding_index)
 
         # nn.GRU：门控循环单元。input_size 是输入维度（词向量维度），
         # hidden_size 是隐藏状态维度；batch_first=True 表示输入/输出张量把 batch 放在第 0 维。
         self.gru = nn.GRU(input_size=config.EMBEDDING_DIM,
-                          hidden_size=config.HIDDEN_SIZE,
-                          batch_first=True)
+                        hidden_size=config.HIDDEN_SIZE,
+                        batch_first=True)
 
     def forward(self, x):
         """前向传播：中文索引序列 -> 句子最后一个真实 token 处的隐藏状态。
@@ -76,12 +76,12 @@ class TranslationDecoder(nn.Module):
         """
         super().__init__()
         self.embedding = nn.Embedding(num_embeddings=vocab_size,
-                                      embedding_dim=config.EMBEDDING_DIM,
-                                      padding_idx=padding_index)
+                                    embedding_dim=config.EMBEDDING_DIM,
+                                    padding_idx=padding_index)
 
         self.gru = nn.GRU(input_size=config.EMBEDDING_DIM,
-                          hidden_size=config.HIDDEN_SIZE,
-                          batch_first=True)
+                        hidden_size=config.HIDDEN_SIZE,
+                        batch_first=True)
 
         # nn.Linear(in_features, out_features)：全连接层，把隐状态维度映射到词表大小，
         # 输出的是"每个候选词的打分（logits）"，后续交给交叉熵/softmax 转成概率。
@@ -93,10 +93,10 @@ class TranslationDecoder(nn.Module):
 
         :param x: 当前输入的词索引，形状 [batch_size, 1]
         :param hidden_0: 上一时间步的隐藏状态，形状 [1, batch_size, hidden_size]
-                         （第 0 维是 GRU 的层数，这里只有 1 层所以是 1）
+                        （第 0 维是 GRU 的层数，这里只有 1 层所以是 1）
         :return: (output, hidden_n)
-                 output   下一个词的打分分布，形状 [batch_size, 1, vocab_size]
-                 hidden_n 更新后的隐藏状态，形状 [1, batch_size, hidden_size]
+                output   下一个词的打分分布，形状 [batch_size, 1, vocab_size]
+                hidden_n 更新后的隐藏状态，形状 [1, batch_size, hidden_size]
         """
         # x.shape: [batch_size, 1]
         # hidden.shape: [1, batch_size, hidden_size]

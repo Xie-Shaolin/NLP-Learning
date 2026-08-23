@@ -46,6 +46,15 @@ class BaseTokenizer:
         self.sos_token_index = self.word2index[self.sos_token]
         self.eos_token_index = self.word2index[self.eos_token]
 
+    '''
+    这里定义了一个"模板方法"模式： 父类定流程，子类定细节 。
+    -> list[str]: 声明这个函数"应该返回一个元素为 str 的列表"，如 ['我', '爱', '你'] 。它只是给人和 IDE 看的提示， Python 不会强制校验
+    pass 是一条 Python 空语句 ，字面意思就是"什么也不做"。
+        它的作用是让函数体 合法地存在但暂时没有内容 。
+        因为 Python 语法要求代码块内至少有一条语句，
+        如果不写会直接报错：IndentationError: expected an indented block
+    类似于java的抽象类abstract，子类必须覆写该方法。
+    '''    
     @classmethod
     # @classmethod：类方法装饰器。第一个参数自动绑定为"类"（约定命名为 cls，不是 self）。
     # 它的作用：无需创建实例就能调用（如 ChineseTokenizer.tokenize(text)），
@@ -90,7 +99,7 @@ class BaseTokenizer:
         # 词表组成：4 个特殊 token 固定在最前面（保证索引稳定）+ 语料中出现过的 token。
         # 列表推导式加了条件 if token.strip() != ''，即剔除空白字符（strip 去除首尾空格后为空则不要）。
         vocab_list = [cls.pad_token, cls.unk_token, cls.sos_token, cls.eos_token] + [token for token in vocab_set if
-                                                                                     token.strip() != '']
+                                                                                    token.strip() != '']
         print(f'词表大小:{len(vocab_list)}')
 
         # 打开文件写入：with 语句自动管理文件资源（无论是否报错都会自动 close）。

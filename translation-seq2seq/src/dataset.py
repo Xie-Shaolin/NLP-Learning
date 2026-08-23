@@ -48,12 +48,34 @@ def collate_fn(batch):
 
     :param batch: DataLoader 打包好的批次，是二元组列表 [(input_tensor, target_tensor), ...]
     :return: (input_tensor, target_tensor)，形状均为 [batch_size, seq_len]，
-             不同句子用 padding_value=0（即 <pad> 的索引）补齐到 batch 内最大长度
+            不同句子用 padding_value=0（即 <pad> 的索引）补齐到 batch 内最大长度
     """
     # 列表推导式：把每个样本的 input 拆出来组成新列表
-    input_tensors = [item[0] for item in batch]
-    target_tensors = [item[1] for item in batch]
+    input_tensors = [item[0] for item in batch] # 中文（源语言）
+    target_tensors = [item[1] for item in batch] # 英文（目标语言）
 
+    '''
+    pad_sequence 是 PyTorch 中 torch.nn.utils.rnn 模块提供的一个函数，用于把 长度不等的张量序列列表 对齐成 一个等长的批张量 。
+    torch.nn.utils.rnn.pad_sequence(
+        sequences,          # 长度不等的张量列表，如 [shape (5,), (3,), (7,)]
+        batch_first=False,  # 输出第 0 维是否为 batch
+        padding_value=0.0   # 填充用的数值
+    )
+    它做的就一件事： 找出所有序列中的最大长度，把短的序列尾部补上 padding_value ，直到和最长的一样长 ，然后把它们堆叠成一个 2D（或更高维）张量。
+    import torch
+    from torch.nn.utils.rnn import pad_sequence
+
+    a = torch.tensor([1, 2, 3])        # 长度 3
+    b = torch.tensor([4, 5])           # 长度 2
+    c = torch.tensor([6])              # 长度 1
+
+    out = pad_sequence([a, b, c], batch_first=True, padding_value=0)
+    print(out)
+    # tensor([[1, 2, 3],
+    #         [4, 5, 0],   ← 第 2 条用 0 补到长度 3
+    #         [6, 0, 0]])  ← 第 3 条用 0 补到长度 3
+    # out.shape = (3, 3)
+    '''
     # pad_sequence：把长度不一的张量列表按最长的对齐。
     # batch_first=True 表示返回张量的第 0 维是 batch；
     # padding_value=0 指定用 0（<pad>）填充空缺位置。

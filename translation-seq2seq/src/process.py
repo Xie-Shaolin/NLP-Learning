@@ -19,7 +19,7 @@ def process():
     #   encoding='utf-8'    指定编码
     #   .dropna()           删除含空值的行（Na 表示缺失值）
     df = pd.read_csv(config.RAW_DATA_DIR / 'cmn.txt', sep='\t', header=None, usecols=[0, 1], names=['en', 'zh'],
-                     encoding='utf-8').dropna()
+                    encoding='utf-8').dropna()
 
     # 划分数据集
     # train_test_split：按 test_size=0.2 随机切分，即 80% 训练、20% 测试；
