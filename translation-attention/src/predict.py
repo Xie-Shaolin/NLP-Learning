@@ -15,7 +15,11 @@ def predict_batch(model, inputs, en_tokenizer):
     model.eval()
     with torch.no_grad():
         # 编码
+        # 【与 seq2seq 的差异】编码器返回两个值：
+        #   encoder_outputs —— 每个时间步的输出，供解码器做注意力加权
+        #   context_vector  —— 最后真实位置的隐状态，作为解码器初始隐状态
         encoder_outputs, context_vector = model.encoder(inputs)
+        # encoder_outputs.shape: [batch_size, src_seq_len, hidden_size]
         # context_vector.shape: [batch_size, hidden_size]
 
         # 解码
@@ -37,6 +41,8 @@ def predict_batch(model, inputs, en_tokenizer):
         # 自回归生成
         for i in range(config.MAX_SEQ_LENGTH):
             # 解码
+            # 【与 seq2seq 的差异】解码器多传一个 encoder_outputs 参数，
+            # 每一步都用注意力在源句上动态聚焦，提升长句翻译质量。
             decoder_output, decoder_hidden = model.decoder(decoder_input, decoder_hidden, encoder_outputs)
             # decoder_output.shape: [batch_size, 1, vocab_size]
 
@@ -94,7 +100,7 @@ def run_predict():
 
     # 3. 模型
     model = TranslationModel(zh_tokenizer.vocab_size, en_tokenizer.vocab_size, zh_tokenizer.pad_token_index,
-                             en_tokenizer.pad_token_index).to(device)
+                            en_tokenizer.pad_token_index).to(device)
     model.load_state_dict(torch.load(config.MODELS_DIR / 'best.pt'))
     print("模型加载成功")
 

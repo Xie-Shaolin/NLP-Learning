@@ -20,7 +20,11 @@ def train_one_epoch(model, dataloader, loss_fn, optimizer, device):
         decoder_targets = targets[:, 1:]  # decoder_targets.shape: [batch_size, seq_len]
         # 前向传播
         # 编码阶段
+        # 【与 seq2seq 的差异】编码器现在返回两个值：
+        #   encoder_outputs  —— 编码器每个时间步的输出（供注意力使用）
+        #   context_vector   —— 编码器最后真实位置的隐状态（作为解码器初始隐状态）
         encoder_outputs, context_vector = model.encoder(encoder_inputs)
+        # encoder_outputs.shape: [batch_size, src_seq_len, hidden_size]
         # context_vector.shape: [batch_size, hidden_size]
 
         # 解码阶段
@@ -32,6 +36,8 @@ def train_one_epoch(model, dataloader, loss_fn, optimizer, device):
         seq_len = decoder_inputs.shape[1]
         for i in range(seq_len):
             decoder_input = decoder_inputs[:, i].unsqueeze(1)  # decoder_input.shape: [batch_size, 1]
+            # 【与 seq2seq 的差异】解码器多传一个 encoder_outputs 参数，
+            # 让每一步解码都能在源句上做注意力加权，而不是只看固定向量。
             decoder_output, decoder_hidden = model.decoder(decoder_input, decoder_hidden, encoder_outputs)
             # decoder_output.shape: [batch_size, 1, vocab_size]
             decoder_outputs.append(decoder_output)
@@ -67,7 +73,7 @@ def train():
     en_tokenizer = EnglishTokenizer.from_vocab(config.MODELS_DIR / 'en_vocab.txt')
     # 4. 模型
     model = TranslationModel(zh_tokenizer.vocab_size, en_tokenizer.vocab_size, zh_tokenizer.pad_token_index,
-                             en_tokenizer.pad_token_index).to(device)
+                            en_tokenizer.pad_token_index).to(device)
     # 5. 损失函数
     loss_fn = torch.nn.CrossEntropyLoss(ignore_index=en_tokenizer.pad_token_index)
     # 6. 优化器
