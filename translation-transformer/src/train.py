@@ -19,11 +19,16 @@ def train_one_epoch(model, dataloader, loss_fn, optimizer, device):
         decoder_inputs = targets[:, :-1]  # decoder_inputs.shape: [batch_size, seq_len]
         decoder_targets = targets[:, 1:]  # decoder_targets.shape: [batch_size, seq_len]
         # 前向传播
+        # src_pad_mask 标记中文侧的 <PAD> 位置，让编码器忽略填充。
+        # tgt_mask 是「下三角掩码」，训练时（teacher forcing）也要遵守自回归规则，防止偷看未来的目标词。
+        # 【与 attention 版的差异】attention 版需要手动 for 循环逐词喂给解码器；
+        # transformer 版一次性把整句目标序列（去掉最后一个词）喂进去，并行得到所有位置的预测。
         src_pad_mask = (encoder_inputs == model.zh_embedding.padding_idx)
         tgt_mask = model.transformer.generate_square_subsequent_mask(decoder_inputs.shape[1])
         decoder_outputs = model(encoder_inputs, decoder_inputs, src_pad_mask, tgt_mask)
         # decoder_outputs.shape: [batch_size, seq_len, en_vocab_size]
 
+        # 展平成 [batch_size*seq_len, en_vocab_size] 与 [batch_size*seq_len]，再计算交叉熵损失。
         loss = loss_fn(decoder_outputs.reshape(-1, decoder_outputs.shape[-1]), decoder_targets.reshape(-1))
 
         # 反向传播

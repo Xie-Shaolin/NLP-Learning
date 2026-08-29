@@ -7,24 +7,58 @@ import config
 
 
 class TranslationDataset(Dataset):
+    # 创建对象时触发
     def __init__(self, path):
         self.data = pd.read_json(path, lines=True, orient='records').to_dict(orient='records')
-
+    # 调用内置 len() 时触发 ： len(dataset) 或 len(dataloader)
     def __len__(self):
         return len(self.data)
-
+    # 按下标取样本时触发：每当你用索引访问 dataset[i] ，
+    # 或者 DataLoader 在 迭代取 batch 时 （每次 for ... in dataloader ），
+    # 它都会反复调用 dataset[i] 来拿单条样本。
     def __getitem__(self, index):
         input_tensor = torch.tensor(self.data[index]['zh'], dtype=torch.long)
         target_tensor = torch.tensor(self.data[index]['en'], dtype=torch.long)
         return input_tensor, target_tensor
 
 
-# 2. 提供一个获取dataloader的方法
+# ========== 数据整理函数 ==========
 def collate_fn(batch):
-    # batch：二元组列表:[(input_tensor, target_tensor)]
+    """把一个 batch 的样本对齐到相同长度（padding），供 DataLoader 在取批次时调用。
+
+    :param batch: DataLoader 打包好的批次，是二元组列表 [(input_tensor, target_tensor), ...]
+    :return: (input_tensor, target_tensor)，形状均为 [batch_size, seq_len]，
+            不同句子用 padding_value=0（即 <pad> 的索引）补齐到 batch 内最大长度
+    """
     input_tensors = [item[0] for item in batch]
     target_tensors = [item[1] for item in batch]
 
+    
+    '''
+    pad_sequence 是 PyTorch 中 torch.nn.utils.rnn 模块提供的一个函数，用于把 长度不等的张量序列列表 对齐成 一个等长的批张量 。
+    torch.nn.utils.rnn.pad_sequence(
+        sequences,          # 长度不等的张量列表，如 [shape (5,), (3,), (7,)]
+        batch_first=False,  # 输出第 0 维是否为 batch
+        padding_value=0.0   # 填充用的数值
+    )
+    它做的就一件事： 找出所有序列中的最大长度，把短的序列尾部补上 padding_value ，直到和最长的一样长 ，然后把它们堆叠成一个 2D（或更高维）张量。
+    import torch
+    from torch.nn.utils.rnn import pad_sequence
+
+    a = torch.tensor([1, 2, 3])        # 长度 3
+    b = torch.tensor([4, 5])           # 长度 2
+    c = torch.tensor([6])              # 长度 1
+
+    out = pad_sequence([a, b, c], batch_first=True, padding_value=0)
+    print(out)
+    # tensor([[1, 2, 3],
+    #         [4, 5, 0],   ← 第 2 条用 0 补到长度 3
+    #         [6, 0, 0]])  ← 第 3 条用 0 补到长度 3
+    # out.shape = (3, 3)
+    '''
+    # pad_sequence：把长度不一的张量列表按最长的对齐。
+    # batch_first=True 表示返回张量的第 0 维是 batch；
+    # padding_value=0 指定用 0（<pad>）填充空缺位置。
     input_tensor = pad_sequence(input_tensors, batch_first=True, padding_value=0)
     target_tensor = pad_sequence(target_tensors, batch_first=True, padding_value=0)
 
@@ -34,6 +68,7 @@ def collate_fn(batch):
 def get_dataloader(train=True):
     path = config.PROCESSED_DATA_DIR / ('train.jsonl' if train else 'test.jsonl')
     dataset = TranslationDataset(path)
+
     return DataLoader(dataset, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=collate_fn)
 
 

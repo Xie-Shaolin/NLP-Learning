@@ -15,6 +15,9 @@ def predict_batch(model, inputs, en_tokenizer):
     model.eval()
     with torch.no_grad():
         # 编码
+        # src_pad_mask 标记输入中文里哪些位置是 <PAD>，让编码器忽略这些填充位置。
+        # 【与 attention 版的差异】attention 版编码器返回 (encoder_outputs, context_vector) 两个值；
+        # transformer 版只需一次 encode 得到 memory（编码器的完整上下文表示），不再需要 context_vector。
         src_pad_mask = (inputs == model.zh_embedding.padding_idx)
         memory = model.encode(inputs, src_pad_mask)
         # memory.shape: [batch_size, src_seq_len, d_model]
@@ -23,9 +26,9 @@ def predict_batch(model, inputs, en_tokenizer):
         batch_size = inputs.shape[0]
         device = inputs.device
 
-        # decoder_hidden.shape: [1, batch_size, hidden_size]
+        # 解码起始：decoder_input 初始只含一个 <SOS>，之后每轮生成一个词并拼接到末尾。
         decoder_input = torch.full([batch_size, 1], en_tokenizer.sos_token_index, device=device)
-        # decoder_input.shape: [batch_size, tgt_seq_len]
+        # decoder_input.shape: [batch_size, tgt_seq_len]（tgt_seq_len 会随着生成逐步变长）
 
         # 预测结果缓存
         generated = []
@@ -36,16 +39,19 @@ def predict_batch(model, inputs, en_tokenizer):
         # 自回归生成
         for i in range(config.MAX_SEQ_LENGTH):
             # 解码
+            # tgt_mask 是「下三角掩码」，保证每个位置只能关注它自身及之前的 token（自回归，不能看未来）。
+            # 【与 attention 版的差异】attention 版每次只把「当前一个词」喂给单步 GRU；
+            # transformer 版把「已经生成的所有词」整体喂给解码器，再只取最后一个位置的输出作为本步结果。
             tgt_mask = model.transformer.generate_square_subsequent_mask(decoder_input.shape[1])
             decoder_output = model.decode(decoder_input, memory, tgt_mask, src_pad_mask)
             # decoder_output.shape: [batch_size, tgt_seq_len, en_vocab_size]
 
-            # 保存预测结果
+            # 保存预测结果：只取最后一步（最新生成的那个位置）的输出做 argmax，得到下一个 token。
             next_token_indexes = torch.argmax(decoder_output[:, -1, :], dim=-1, keepdim=True)
             # next_token_indexes.shape: [batch_size, 1]
             generated.append(next_token_indexes)
 
-            # 更新输入(decoder_input)
+            # 更新输入：把新生成的 token 拼到 decoder_input 末尾，供下一轮继续生成。
             decoder_input = torch.cat([decoder_input, next_token_indexes], dim=-1)
 
             # 判断是否应该结束
@@ -94,7 +100,7 @@ def run_predict():
 
     # 3. 模型
     model = TranslationModel(zh_tokenizer.vocab_size, en_tokenizer.vocab_size, zh_tokenizer.pad_token_index,
-                             en_tokenizer.pad_token_index).to(device)
+                            en_tokenizer.pad_token_index).to(device)
     model.load_state_dict(torch.load(config.MODELS_DIR / 'best.pt'))
     print("模型加载成功")
 
