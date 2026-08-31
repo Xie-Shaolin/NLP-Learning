@@ -54,6 +54,8 @@ class PositionEncoding(nn.Module):
     def forward(self, x):
         # x.shape: [batch_size, seq_len, dim_model]
         seq_len = x.shape[1]
+        # 这里的 pe 来自于 init 中的 pe
+        # 这里的 part_pe 是截取 pe 中的前 seq_len 个元素
         part_pe = self.pe[0:seq_len]
         # part_pe.shape: [seq_len, dim_model]
         # 逐元素加到词向量上（[seq_len, dim_model] 自动广播到整个 batch）。
@@ -63,14 +65,19 @@ class PositionEncoding(nn.Module):
 class TranslationModel(nn.Module):
     def __init__(self, zh_vocab_size, en_vocab_size, zh_padding_index, en_padding_index):
         super().__init__()
+        # nn.Embedding 本质是一张 可训练的查找表（Lookup Table） ：输入一个词在词表中的 整数下标 ，它返回对应的 稠密向量 。
         # 中英文各自独立的 embedding 层：源语言和目标语言词表不同，需要分开查表。
-        self.zh_embedding = nn.Embedding(num_embeddings=zh_vocab_size,
-                                         embedding_dim=config.DIM_MODEL,
-                                         padding_idx=zh_padding_index)
+        '''
+            padding_idx 的作用？
+            padding_idx 的作用是告诉 Embedding 层：" 下标为这个值的 token 是填充符号，它不携带任何语义，也不需要参与学习 "
+        '''
+        self.zh_embedding = nn.Embedding(num_embeddings=zh_vocab_size, # 词表大小（有多少个词）
+                                        embedding_dim=config.DIM_MODEL, # 每个词的向量维度 = 128
+                                        padding_idx=zh_padding_index) # padding 符号的专属下标
 
         self.en_embedding = nn.Embedding(num_embeddings=en_vocab_size,
-                                         embedding_dim=config.DIM_MODEL,
-                                         padding_idx=en_padding_index)
+                                        embedding_dim=config.DIM_MODEL,
+                                        padding_idx=en_padding_index)
 
         # 位置编码：源、目标语言共享同一套（位置信息与语言无关）。
         self.position_encoding = PositionEncoding(config.MAX_SEQ_LENGTH, config.DIM_MODEL)
@@ -80,10 +87,10 @@ class TranslationModel(nn.Module):
         # transformer 版直接复用 nn.Transformer，其内部已实现多头自注意力、前馈网络等全部组件。
         # batch_first=True 让输入统一为 [batch, seq_len, dim] 的形状。
         self.transformer = nn.Transformer(d_model=config.DIM_MODEL,
-                                          nhead=config.NUM_HEADS,
-                                          num_encoder_layers=config.NUM_ENCODER_LAYERS,
-                                          num_decoder_layers=config.NUM_DECODER_LAYERS,
-                                          batch_first=True)
+                                        nhead=config.NUM_HEADS,
+                                        num_encoder_layers=config.NUM_ENCODER_LAYERS,
+                                        num_decoder_layers=config.NUM_DECODER_LAYERS,
+                                        batch_first=True)
 
         # 把 Transformer 输出投影到英文词表维度，得到每个位置对每个英文词的打分（logits）。
         self.linear = nn.Linear(in_features=config.DIM_MODEL, out_features=en_vocab_size)
@@ -119,7 +126,7 @@ class TranslationModel(nn.Module):
         # tgt_mask 是「下三角掩码」，保证解码第 i 个词时只能看到第 0~i-1 个词（防止偷看未来答案）。
         # memory_key_padding_mask 同样用于忽略中文侧的 <PAD>。
         output = self.transformer.decoder(tgt=embed, memory=memory,
-                                          tgt_mask=tgt_mask, memory_key_padding_mask=memory_pad_mask)
+                                        tgt_mask=tgt_mask, memory_key_padding_mask=memory_pad_mask)
         # output.shape: [batch_size, tgt_len, dim_model]
 
         outputs = self.linear(output)
