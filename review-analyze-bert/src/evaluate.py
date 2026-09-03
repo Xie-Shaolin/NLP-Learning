@@ -6,7 +6,7 @@ import config
 from model import ReviewAnalyzeModel
 from dataset import get_dataloader
 from predict import predict_batch
-from src.tokenizer import JiebaTokenizer
+from tokenizer import JiebaTokenizer
 
 
 def evaluate(model, test_dataloader, device):

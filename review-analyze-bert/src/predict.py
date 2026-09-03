@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 
 import config
 from model import ReviewAnalyzeModel
-from src.tokenizer import JiebaTokenizer
+from tokenizer import JiebaTokenizer
 
 
 def predict_batch(model, inputs):

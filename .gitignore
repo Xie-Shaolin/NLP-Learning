@@ -1,7 +1,8 @@
 .DS_Store
 *.pyc
 hugging-face/pretrained/
-review-analyze-bert/models/*
-review-analyze-bert/logs/*
-review-analyze-bert/data/processed/*
-review-analyze-bert/pretrained/*
+*/models/best.pt
+*/logs/*
+*/data/processed/*
+*/pretrained/*
+.ipynb_checkpoints/
