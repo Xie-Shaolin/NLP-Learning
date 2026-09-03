@@ -32,7 +32,9 @@ def process():
     print(dataset_dict)
 
     # 4. 创建分词器：加载本地预训练的 bert-base-chinese 分词器
-    tokenizer = AutoTokenizer.from_pretrained(config.PRE_TRAINED_DIR / 'bert-base-chinese')
+    # tokenizer = AutoTokenizer.from_pretrained(config.PRE_TRAINED_DIR / 'bert-base-chinese')
+    # 4. 创建分词器：加载 网络上 预训练的 bert-base-chinese 分词器
+    tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-chinese")
 
     # 5. 构建数据集：定义批量编码函数，供 dataset.map 调用
     def batch_encode(batch):

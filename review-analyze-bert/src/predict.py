@@ -56,7 +56,8 @@ def run_predict():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # 2. 加载与训练/处理阶段一致的分词器
-    tokenizer = AutoTokenizer.from_pretrained(config.PRE_TRAINED_DIR / 'bert-base-chinese')
+    # tokenizer = AutoTokenizer.from_pretrained(config.PRE_TRAINED_DIR / 'bert-base-chinese')
+    tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-chinese")
     # 3. 加载模型结构并载入训练好的权重
     model = ReviewAnalyzeModel().to(device)
     model.load_state_dict(torch.load(config.MODELS_DIR / 'best.pt'))

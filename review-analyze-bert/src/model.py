@@ -18,7 +18,8 @@ class ReviewAnalyzeModel(nn.Module):
         """初始化模型：加载预训练 BERT，并构建输出维度为 1 的分类头。"""
         super().__init__()
         # 加载本地预训练的 bert-base-chinese 模型（不含分类头）
-        self.bert = AutoModel.from_pretrained(config.PRE_TRAINED_DIR / 'bert-base-chinese')
+        # self.bert = AutoModel.from_pretrained(config.PRE_TRAINED_DIR / 'bert-base-chinese')
+        self.bert = AutoModel.from_pretrained("google-bert/bert-base-chinese")
         # 分类头：把 BERT 的 hidden_size 维向量压缩为 1 维 logits
         # nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
         # in_features=self.bert.config.hidden_size：输入特征维度，即每个样本输入这个层的向量长度
